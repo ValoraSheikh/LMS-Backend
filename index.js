@@ -8,6 +8,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import xssClean from 'xss-clean';
 import ExpressMongoSanitize from 'express-mongo-sanitize';
+import router from './routes/health.route.js';
 
 dotenv.config()
 const app = express();
@@ -66,8 +67,10 @@ app.use(cors({
   ]
 }));
 
+// API routes
+app.use("/health", router);
 
-
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     status: "error",
