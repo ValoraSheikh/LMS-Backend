@@ -1,11 +1,11 @@
 import { ApiError, catchAsync } from "./error.middleware";
-import jwt from 'jwt'
+import jwt from "jwt";
 
 export const isAuthenticated = catchAsync(async (req, res, next) => {
-  const token = req.cookies.token
+  const token = req.cookies.token;
 
   if (!token) {
-    throw new ApiError("You are not logged in", 403)
+    throw new ApiError("You are not logged in", 403);
   }
 
   try {
@@ -13,6 +13,6 @@ export const isAuthenticated = catchAsync(async (req, res, next) => {
     req.id = decoded.userId;
     next();
   } catch (error) {
-    throw new ApiError("JWT token error", 401)
+    throw new ApiError("JWT token error", 401);
   }
-})
+});
