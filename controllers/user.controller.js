@@ -1,6 +1,7 @@
 import { ApiError, catchAsync } from "../middleware/error.middleware.js";
 import { User } from "../models/user.model.js";
 import { generateToken } from "../utils/generateToken.js";
+import { uploadMedia, deleteFileFromCloudinary } from "../utils/cloudinary.js";
 
 export const createUserAccount = catchAsync(async (req, res) => {
   const { name, email, password, role = "student" } = req.body;
@@ -59,6 +60,42 @@ export const getCurrentUserProfile = catchAsync(async (req, res) => {
       ...user.toJSON(),
       totalEnrolledCourses: user.totalEnrolledCourses,
     },
+  });
+});
+
+export const updateUserProfile = catchAsync(async (req, res) => {
+  const { name, email, bio } = req.body;
+  const updateData = {
+    name,
+    email: email?.toLowerCase(),
+    bio,
+  };
+
+  if (req.file) {
+    const avatarResult = await uploadMedia(req.file.path);
+    updateData.avatar = avatarResult.secure_url;
+
+    //delete old avatar
+    const user = await User.findById(req.id);
+    if (user.avatar && user.avatar !== "default-avatar.png") {
+      await deleteFileFromCloudinary(user.avatar);
+    }
+  }
+
+  //Update user and updated doc
+  const updatedUser = await User.findByIdAndUpdate(req.id, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updatedUser) {
+    throw new ApiError("User not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    messasge: "Profile updated successfully",
+    data: updatedUser,
   });
 });
 
