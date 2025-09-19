@@ -32,21 +32,34 @@ export const authenticateUser = catchAsync(async (req, res) => {
   }
 
   await user.updateLastActive();
-  generateToken(res, user, `Welcome back ${user.name}`)
+  generateToken(res, user, `Welcome back ${user.name}`);
 });
 
-export const signOutUser = catchAsync(async(_req, res) => {
-  res.cookie('toekn', '', {maxAge: 0})
+export const signOutUser = catchAsync(async (_req, res) => {
+  res.cookie("toekn", "", { maxAge: 0 });
   res.status(200).json({
     success: true,
-    messasge: "Signed out successfully"
-  })
-})
+    messasge: "Signed out successfully",
+  });
+});
 
 export const getCurrentUserProfile = catchAsync(async (req, res) => {
-  
-})
+  const user = await User.findOne(req.id).populate({
+    path: "enrolledCourses.course",
+    select: "title thumbnail description",
+  });
 
-export const test = catchAsync(async (req, res) => {
-  
-})
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      ...user.toJSON(),
+      totalEnrolledCourses: user.totalEnrolledCourses,
+    },
+  });
+});
+
+export const test = catchAsync(async (req, res) => {});
