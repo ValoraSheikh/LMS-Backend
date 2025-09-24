@@ -43,3 +43,66 @@ export const createNewCourse = catchAsync(async (req, res) => {
 });
 
 
+export const searchCourses = catchAsync(async (req, res) => {
+  const {
+    query = "",
+    categories = [],
+    level,
+    priceRange,
+    sortBy = "newest",
+  } = req.query;
+
+  const searchCriteria = {
+    isPublished: true,
+    $or: [
+      { title: { $regex: query, $options: "i" } },
+      { subtitle: { $regex: query, $options: "i" } },
+      { description: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  if (categories.level > 0) {
+    searchCriteria.categories = { $in: categories };
+  }
+
+  if (level) {
+    searchCriteria.level = level;
+  }
+
+  if (priceRange) {
+    const [min, max] = priceRange.split("-");
+    searchCriteria.priceRange = { $gte: min || 0, $lte: max || Infinity };
+  }
+
+  const sortOptions = {};
+  switch (sortBy) {
+    case "price-low":
+      sortOptions.price = 1;
+      break;
+
+    case "price-hight":
+      sortOptions.price = -1;
+      break;
+
+    case "oldest":
+      sortOptions.createdAt = 1;
+      break;
+
+    default:
+      sortOptions.createdAt = -1;
+      break;
+  }
+
+  const courses = await Course.find(searchCriteria)
+    .populate({
+      path: "instructor",
+      select: "name avatar",
+    })
+    .sort(sortOptions);
+
+  res.status(200).json({
+    success: true,
+    count: courses.length,
+    data: courses,
+  });
+});
