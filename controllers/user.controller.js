@@ -125,6 +125,29 @@ export const changeUserPassword = catchAsync(async (req, res) => {
   });
 });
 
+export const forgotPassword = catchAsync(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new ApiError("Email is required", 400);
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset instructions sent to email",
+  });
+});
+
+
 
 
 export const test = catchAsync(async (req, res) => {});
