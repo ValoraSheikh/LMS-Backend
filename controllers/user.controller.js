@@ -171,4 +171,25 @@ export const resetPassword = catchAsync(async (req, res) => {
   });
 });
 
+export const deleteUserAccount = catchAsync(async (req, res) => {
+  const id = req.id;
+
+  if (!id) {
+    throw new ApiError("User id is required", 400);
+  }
+
+  const user = await User.findByIdAndDelete(id);
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
+  res.cookie("token", "", { maxAge: 0 });
+
+  res.status(200).json({
+    success: true,
+    message: "User deleted successfully",
+  });
+});
+
 export const test = catchAsync(async (req, res) => {});
