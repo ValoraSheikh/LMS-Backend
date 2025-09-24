@@ -147,7 +147,28 @@ export const forgotPassword = catchAsync(async (req, res) => {
   });
 });
 
+export const resetPassword = catchAsync(async (req, res) => {
+  const { token } = req.param;
+  const { password } = req.body;
 
+  const user = await User.findOne({
+    resetPasswordToken: crypto.createHash("sha256").update(token).digest("hex"),
+    resetPasswordExpires: { $gt: Date.now() },
+  });
 
+  if (!password) {
+    throw new ApiError("Password is required", 400);
+  }
+
+  user.password = password;
+  user.resetPasswordExpires = undefined;
+  user.resetPasswordToken = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset instructions sent to email",
+  });
+});
 
 export const test = catchAsync(async (req, res) => {});
