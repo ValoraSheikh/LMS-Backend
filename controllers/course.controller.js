@@ -135,3 +135,17 @@ export const getPublishedCourses = catchAsync(async (req, res) => {
   })
 });
 
+export const getMyCreatedCourses = catchAsync(async (req, res) => {
+  const id = req.id
+
+  const courses = await Course.find({ instructor: id}).populate({
+    path: 'enrolledStudents',
+    select: 'name avatar'
+  })
+
+  res.status(200).json({
+    success: true,
+    data: courses
+  })
+});
+
