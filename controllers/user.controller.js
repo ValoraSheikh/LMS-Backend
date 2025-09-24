@@ -99,4 +99,32 @@ export const updateUserProfile = catchAsync(async (req, res) => {
   });
 });
 
+export const changeUserPassword = catchAsync(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    throw new ApiError("Old and new password is required", 401);
+  }
+
+  const user = await User.findById(req.id).select("+password");
+
+  if (!user || !(await user.comparePasword(oldPassword))) {
+    throw new ApiError("You old password is not correct", 404);
+  }
+
+  if (oldPassword === newPassword) {
+    throw new ApiError("Your new password should be same as old password");
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    messasge: "Password updated successfully",
+  });
+});
+
+
+
 export const test = catchAsync(async (req, res) => {});
