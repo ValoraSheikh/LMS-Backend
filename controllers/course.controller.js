@@ -1,10 +1,10 @@
 import { ApiError } from "../middleware/error.middleware";
 import { Course } from "../models/course.model";
 import { User } from "../models/user.model";
-import { uploadMedia } from "../utils/cloudinary";
+import { deleteFileFromCloudinary, uploadMedia } from "../utils/cloudinary";
 
 export const createNewCourse = catchAsync(async (req, res) => {
-  const { title, suntitle, description, category, level, price } = req.body;
+  const { title, subtitle, description, category, level, price } = req.body;
 
   let thumbnail;
   if (req.file) {
@@ -119,8 +119,8 @@ export const getPublishedCourses = catchAsync(async (req, res) => {
       })
       .sort({ createdAt: 1 })
       .skip(skip)
-      .limit(limit),  
-    Course.createDocument({ isPublished: true})
+      .limit(limit),
+    Course.createDocument({ isPublished: true }),
   ]);
 
   res.status(200).json({
@@ -131,21 +131,68 @@ export const getPublishedCourses = catchAsync(async (req, res) => {
       limit,
       total,
       pages: Math.ceil(total / limit),
-    }
-  })
+    },
+  });
 });
 
 export const getMyCreatedCourses = catchAsync(async (req, res) => {
-  const id = req.id
+  const id = req.id;
 
-  const courses = await Course.find({ instructor: id}).populate({
-    path: 'enrolledStudents',
-    select: 'name avatar'
-  })
+  const courses = await Course.find({ instructor: id }).populate({
+    path: "enrolledStudents",
+    select: "name avatar",
+  });
 
   res.status(200).json({
     success: true,
-    data: courses
-  })
+    data: courses,
+  });
 });
 
+export const updateCourseDetails = catchAsync(async (req, res) => {
+  const { courseId } = req.params;
+  const { title, subtitle, description, category, level, price } = req.body;
+
+  const course = await Course.findById(courseId);
+
+  if (course.instructor.toString() != req.id) {
+    throw new ApiError("Unauthorized access", 403)
+  }
+
+  let thumbnail;
+  if (req.file) {
+    if (req.file.thumbnail) {
+      await deleteFileFromCloudinary(course.thumbnail)
+    } else {
+      const result = await uploadMedia(req.file);
+      thumbnail = result?.secure_url || req.file.path;
+    }
+  } else {
+    throw new ApiError("Thumnail is required", 400);
+  }
+
+  const updateData = {
+    title,
+    subtitle,
+    description,
+    category,
+    level,
+    price,
+    ...(thumbnail && {thumbnail}),
+  };
+
+  const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updatedCourse) {
+    throw new ApiError("Course not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    messasge: "Course updated successfully",
+    data: updatedCourse,
+  });
+});
