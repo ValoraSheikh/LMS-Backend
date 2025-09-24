@@ -42,7 +42,6 @@ export const createNewCourse = catchAsync(async (req, res) => {
   });
 });
 
-
 export const searchCourses = catchAsync(async (req, res) => {
   const {
     query = "",
@@ -106,3 +105,33 @@ export const searchCourses = catchAsync(async (req, res) => {
     data: courses,
   });
 });
+
+export const getPublishedCourses = catchAsync(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const [courses, total] = await Promise.all([
+    Course.find({ isPublished: true })
+      .populate({
+        path: "instructor",
+        select: "name avatar",
+      })
+      .sort({ createdAt: 1 })
+      .skip(skip)
+      .limit(limit),  
+    Course.createDocument({ isPublished: true})
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: courses,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    }
+  })
+});
+
