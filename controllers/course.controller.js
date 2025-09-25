@@ -1,5 +1,6 @@
 import { ApiError } from "../middleware/error.middleware";
 import { Course } from "../models/course.model";
+import { Lecture } from "../models/lecture.model";
 import { User } from "../models/user.model";
 import { deleteFileFromCloudinary, uploadMedia } from "../utils/cloudinary";
 
@@ -156,13 +157,13 @@ export const updateCourseDetails = catchAsync(async (req, res) => {
   const course = await Course.findById(courseId);
 
   if (course.instructor.toString() != req.id) {
-    throw new ApiError("Unauthorized access", 403)
+    throw new ApiError("Unauthorized access", 403);
   }
 
   let thumbnail;
   if (req.file) {
     if (req.file.thumbnail) {
-      await deleteFileFromCloudinary(course.thumbnail)
+      await deleteFileFromCloudinary(course.thumbnail);
     } else {
       const result = await uploadMedia(req.file);
       thumbnail = result?.secure_url || req.file.path;
@@ -178,7 +179,7 @@ export const updateCourseDetails = catchAsync(async (req, res) => {
     category,
     level,
     price,
-    ...(thumbnail && {thumbnail}),
+    ...(thumbnail && { thumbnail }),
   };
 
   const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
@@ -195,4 +196,119 @@ export const updateCourseDetails = catchAsync(async (req, res) => {
     messasge: "Course updated successfully",
     data: updatedCourse,
   });
+});
+
+export const getCourseDetails = catchAsync(async (req, res) => {
+  const { courseId } = req.params;
+
+  if (!courseId) {
+    throw new ApiError("Course ID is required to get the course details", 400);
+  }
+
+  const course = await Course.findById(courseId)
+    .populate({
+      path: "instructor",
+      select: "name avatar bio",
+    })
+    .populate({
+      path: "lectures",
+      select: "title videoUrl duration isPreview order",
+    });
+
+  if (!course) {
+    throw new ApiError("Course not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Course details successfully parsed",
+    data: {
+      ...course.toJSON(),
+      averageRating: course.averageRating,
+    },
+  });
+});
+
+export const addLectureToCourse = catchAsync(async (req, res) => {
+  const { title, description, isPreview, order } = req.body;
+  const { courseId } = req.params;
+
+  const courseInstructor = await Course.findById(courseId);
+
+  if (courseInstructor.instructor.toString() !== req.id) {
+    throw new ApiError("You are not authorized to update this course", 401);
+  }
+
+  if (!req.file) {
+    throw new ApiError("Video file is required", 400);
+  }
+
+  let videoUrl;
+  let publicId;
+  let duration;
+  if (req.file) {
+    const result = await uploadMedia(req.file);
+    videoUrl = result?.secure_url || req.file.path;
+    publicId = result?.public_id || req.file.path;
+    duration = result?.duration || 0;
+  }
+
+  const lecture = await Lecture.create({
+    title,
+    description,
+    publicId,
+    isPreview,
+    order,
+    videoUrl,
+    duration,
+  });
+
+  const lectureId = lecture._id;
+
+  const course = await Course.findByIdAndUpdate(
+    courseId,
+    { $push: { lectures: lectureId } },
+    { new: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Lecture is successfully added to course",
+  });
+});
+
+export const getCourseLectures = catchAsync(async (req, res) => {
+  const { courseId } = req.params;
+
+  if (!courseId) {
+    throw new ApiError("Course ID is required", 400)
+  }
+
+  const course = await Course.findById(courseId)
+    .populate({
+      path: 'lectures',
+      select: 'videoUrl title description duration publicId order',
+      options: { sort: { order: 1}},
+    })
+
+  if (!course) {
+    throw new ApiError("Course not found", 404)
+  }
+
+  let lectures = course.lectures;
+  const isEnrolled = course.enrolledStudents.includes(req.id)
+  const isInstructor = course.instructor.toString() === req.id
+
+  if (!isEnrolled && !isInstructor) {
+    lectures = lectures.filter((lecture) => lecture.isPreview)
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      lectures,
+      isEnrolled,
+      isInstructor
+    }
+  })
 });
