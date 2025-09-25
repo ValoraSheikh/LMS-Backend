@@ -48,3 +48,25 @@ export const validateSignUp = validate([
   commonValidations.name,
   commonValidations.bio,
 ]);
+
+export const validateSignIn = validate([
+  commonValidations.email,
+  body('password').notEmpty().withMessage("Password is required"),
+])
+
+export const validatePasswordChange = validate([
+  body('currentPassword')
+    .notEmpty()
+    .message('Current password is required'),
+  body('newPassword')
+    .notEmpty()
+    .message('New password is required')
+    .custom((value, { req }) => {
+      if (value === req.body.currentPassword) {
+        throw new Error("New password must be different from current password");
+      }
+      return true;
+    })
+    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*])/)
+    .withMessage("Password must contain at least one number, one uppercase letter, one lowercase letter, and one special character")
+])
