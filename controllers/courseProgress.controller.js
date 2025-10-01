@@ -104,3 +104,27 @@ export const updateLectureProgress = catchAsync(async (req, res) => {
   });
 });
 
+export const markCourseAsCompleted = catchAsync(async (req, res) => {
+  // TODO: Implement mark course as completed functionality
+
+  const { courseId } = req.params;
+
+  let courseProgress = await CourseProgress.findOne({
+    user: req.id,
+    course: courseId,
+  });
+
+  courseProgress.lectureProgress.forEach((lp) => {
+    lp.isCompleted = true;
+  });
+
+  courseProgress.isCompleted = true;
+
+  await courseProgress.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Course marked are completed",
+    data: courseProgress,
+  });
+});
