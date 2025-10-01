@@ -128,3 +128,31 @@ export const markCourseAsCompleted = catchAsync(async (req, res) => {
     data: courseProgress,
   });
 });
+
+export const resetCourseProgress = catchAsync(async (req, res) => {
+  // TODO: Implement reset course progress functionality
+
+  const { courseId, lectureId } = req.params;
+
+  const courseProgress = await CourseProgress.findOne({
+    user: req.id,
+    course: courseId,
+  });
+
+  if (!courseProgress) {
+    throw new ApiError("Course progress not found", 404)
+  }
+
+  courseProgress.lectureProgress.forEach((lp) => (lp.isCompleted = false));
+
+  courseProgress.isCompleted = false;
+
+  await courseProgress.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Course Progress reset successfully",
+    data: courseProgress,
+  });
+});
+
