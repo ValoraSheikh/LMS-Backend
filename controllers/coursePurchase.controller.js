@@ -178,5 +178,20 @@ export const getCoursePurchaseStatus = catchAsync(async (req, res) => {
  * @route GET /api/v1/payments/purchased-courses
  */
 export const getPurchasedCourses = catchAsync(async (req, res) => {
-  // TODO: Implement get purchased courses functionality
+  const purchases = await CoursePurchase.find({
+    userId: req.id,
+    status: "completed",
+  }).populate({
+    path: "courseId",
+    select: "courseTitle courseThumbnail courseDescription category",
+    populate: {
+      path: "creator",
+      select: "name avatar",
+    },
+  });
+
+  res.status(200).json({
+    success: true,
+    data: purchases.map((purchase) => purchase.courseId),
+  });
 });
