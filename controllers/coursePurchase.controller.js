@@ -146,7 +146,31 @@ export const handleStripeWebhook = catchAsync(async (req, res) => {
  * @route GET /api/v1/payments/courses/:courseId/purchase-status
  */
 export const getCoursePurchaseStatus = catchAsync(async (req, res) => {
-  // TODO: Implement get course purchase status functionality
+  const { courseId } = req.params;
+
+  // Find course with populated data
+  const course = await Course.findById(courseId)
+    .populate("creator", "name avatar")
+    .populate("lectures", "lectureTitle videoUrl duration");
+
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
+
+  // Check if user has purchased the course
+  const purchased = await CoursePurchase.exists({
+    user: req.id,
+    course: courseId,
+    status: "completed",
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      course,
+      isPurchased: Boolean(purchased),
+    },
+  });
 });
 
 /**
